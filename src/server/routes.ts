@@ -26,7 +26,7 @@ const routeRouter = (router: Router) => {
 const sectorRouter = (router: Router) => {
   router.get('/sectors', sectorController.getAllSectors);
   router.get('/sectors/:id', sectorController.getSectorById);
-  router.post('/sectors', authenticate, sectorController.createSector);
+  router.post('/sectors', sectorController.createSector);
   router.put('/sectors/:id', authenticate, sectorController.updateSector);
   router.delete('/sectors/:id', authenticate, sectorController.deleteSector);
 };
