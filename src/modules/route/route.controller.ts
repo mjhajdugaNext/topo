@@ -30,7 +30,7 @@ export const updateRoute = async (req: Request, res: Response): Promise<void> =>
 };
 
 export const deleteRoute = async (req: Request, res: Response): Promise<void> => {
-  const deleted = await routeService.delete(req.params.id);
+  const deleted = await routeService.deleteItem(req.params.id);
   if (!deleted) {
     res.status(404).json({ message: 'Route not found' });
     return;

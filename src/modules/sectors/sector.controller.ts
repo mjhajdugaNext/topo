@@ -30,7 +30,7 @@ export const updateSector = async (req: Request, res: Response): Promise<void> =
 };
 
 export const deleteSector = async (req: Request, res: Response): Promise<void> => {
-  const deleted = await sectorService.delete(req.params.id);
+  const deleted = await sectorService.deleteItem(req.params.id);
   if (!deleted) {
     res.status(404).json({ message: 'Sector not found' });
     return;
