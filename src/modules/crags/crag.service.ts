@@ -6,7 +6,7 @@ import {CragModel} from './crag.model';
 import { ICrag, PartialCrag, CRAG_DATA_TO_OMIT, Crag, CragToSave } from './crag.interface';
 
 export const getCrags = async (filter: any = undefined, toOmit: string[] = []): Promise<PartialCrag[]> => {
-  return mongooseDbOperation(() => CragModel.find(filter), [...CRAG_DATA_TO_OMIT, ...toOmit]) as Promise<PartialCrag[]>;
+  return mongooseDbOperation(() => CragModel.find(filter).populate('area'), [...CRAG_DATA_TO_OMIT, ...toOmit]) as Promise<PartialCrag[]>;
 };
 
 export const getCragById = (id: string): Promise<PartialCrag> => {
