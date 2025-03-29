@@ -10,6 +10,7 @@ const CragSchema = new Schema({
   name: { type: String, required: true },
   coordinates: { type: CoordinatesSchema, required: true },
   description: { type: String, required: false },
+  area: { type: Schema.Types.ObjectId, ref: 'Area', required: true },
 }, { timestamps: true });
 
 export const CragModel = mongoose.model<Crag & Document>('Crag', CragSchema);

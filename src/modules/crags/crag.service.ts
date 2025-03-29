@@ -1,27 +1,82 @@
-import { Crag } from './crag.interface';
-import { CragModel } from './crag.model';
+import Joi, { Schema } from 'joi';
+import { validate } from '../../shared/errors';
 import { mongooseDbOperation } from '../../shared/mongoose.helpers';
+import mongoose from 'mongoose';
+import {CragModel} from './crag.model';
+import { ICrag, PartialCrag, CRAG_DATA_TO_OMIT, Crag, CragToSave } from './crag.interface';
 
-export const getAll = async (): Promise<Crag[]> => {
-  return mongooseDbOperation(() => CragModel.find().exec()) as Promise<Crag[]>;
+export const getCrags = async (filter: any = undefined, toOmit: string[] = []): Promise<PartialCrag[]> => {
+  return mongooseDbOperation(() => CragModel.find(filter), [...CRAG_DATA_TO_OMIT, ...toOmit]) as Promise<PartialCrag[]>;
 };
 
-export const getById = async (id: string): Promise<Crag | null> => {
-  return mongooseDbOperation(() => CragModel.findById(id).exec()) as Promise<Crag | null>;
+export const getCragById = (id: string): Promise<PartialCrag> => {
+  return mongooseDbOperation(
+    () => CragModel.findById(new mongoose.Types.ObjectId(id)),
+    CRAG_DATA_TO_OMIT
+  ) as Promise<PartialCrag>;
 };
 
-export const create = async (cragData: Omit<Crag, '_id'>): Promise<Crag> => {
-  const newCrag = new CragModel(cragData);
-  return mongooseDbOperation(() => newCrag.save()) as Promise<Crag>;
+const createCragValidationSchema: Schema = Joi.object({
+  name: Joi.string().required(),
+  description: Joi.string().optional(),
+  coordinates: Joi.object({
+    latitude: Joi.number().required(),
+    longitude: Joi.number().required()
+  }).required(),
+  parkingCoordinates: Joi.object({
+    latitude: Joi.number().required(),
+    longitude: Joi.number().required()
+  }).optional(),
+  area: Joi.string().optional()
+});
+
+export const createCrag = async (crag: ICrag): Promise<PartialCrag> => {
+  await validate(createCragValidationSchema, crag);
+
+  const cragToSave: CragToSave = {
+    name: crag.name,
+    description: crag.description,
+    coordinates: crag.coordinates,
+    parkingCoordinates: crag.parkingCoordinates,
+    area: crag.area,
+  };
+
+  return mongooseDbOperation(() => new CragModel(cragToSave).save(), CRAG_DATA_TO_OMIT) as Promise<PartialCrag>;
 };
 
-export const update = async (id: string, cragData: Partial<Crag>): Promise<Crag | null> => {
-  return mongooseDbOperation(() => 
-    CragModel.findByIdAndUpdate(id, cragData, { new: true }).exec()
-  ) as Promise<Crag | null>;
+export const deleteCragById = (id: string): Promise<PartialCrag> => {
+  return mongooseDbOperation(() => CragModel.findOneAndDelete({ _id: id }), CRAG_DATA_TO_OMIT) as Promise<PartialCrag>;
 };
 
-export const deleteItem = async (id: string): Promise<boolean> => {
-  const result = await mongooseDbOperation(() => CragModel.findByIdAndDelete(id).exec());
-  return !!result;
+const updateCragValidationSchema: Schema = Joi.object()
+  .keys({
+    name: Joi.string().optional(),
+    location: Joi.string().optional(),
+    description: Joi.string().optional(),
+    coordinates: Joi.object({
+      latitude: Joi.number().required(),
+      longitude: Joi.number().required()
+    }).optional(),
+    area: Joi.string().optional()
+  })
+  .required()
+  .min(1);
+
+export const updateCragById = async (id: string, crag: ICrag): Promise<PartialCrag> => {
+  await validate(updateCragValidationSchema, crag);
+
+  const operation = async () => {
+    const dbCrag: any = await CragModel.findOne({ _id: id });
+
+    dbCrag.name = crag.name || dbCrag.name;
+    dbCrag.description = crag.description || dbCrag.description;
+    dbCrag.area = crag.area || dbCrag.area;
+    if (crag.coordinates) {
+      dbCrag.coordinates = crag.coordinates;
+    }
+
+    return dbCrag.save();
+  };
+
+  return mongooseDbOperation(operation, CRAG_DATA_TO_OMIT) as Promise<PartialCrag>;
 };
