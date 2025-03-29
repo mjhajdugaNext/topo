@@ -1,63 +1,86 @@
-import { Route } from './route.interface';
-import { RouteModel } from './route.model';
+import Joi, { Schema } from 'joi';
+import { validate } from '../../shared/errors';
 import { mongooseDbOperation } from '../../shared/mongoose.helpers';
+import mongoose from 'mongoose';
+import { RouteModel } from './route.model';
+import { IRoute, PartialRoute, ROUTE_DATA_TO_OMIT } from './route.interface';
 
-export const getAll = async (): Promise<Route[]> => {
-  return mongooseDbOperation(() => 
-    RouteModel.find()
-      .populate('area')
-      .populate('crag')
-      .populate('sector')
-      .exec()
-  ) as Promise<Route[]>;
+export const getRoutes = async (filter: any = undefined, toOmit: string[] = []): Promise<PartialRoute[]> => {
+  return mongooseDbOperation(() => RouteModel.find(filter).populate('sector').populate('area').populate('crag'), [...ROUTE_DATA_TO_OMIT, ...toOmit]) as Promise<PartialRoute[]>;
 };
 
-export const getById = async (id: string): Promise<Route | null> => {
-  return mongooseDbOperation(() => 
-    RouteModel.findById(id)
-      .populate('area')
-      .populate('crag')
-      .populate('sector')
-      .exec()
-  ) as Promise<Route | null>;
+export const getRouteById = (id: string): Promise<PartialRoute> => {
+  return mongooseDbOperation(
+    () => RouteModel.findById(new mongoose.Types.ObjectId(id)),
+    ROUTE_DATA_TO_OMIT
+  ) as Promise<PartialRoute>;
 };
 
-export const create = async (routeData: Omit<Route, '_id'>): Promise<Route> => {
-  const newRoute = new RouteModel(routeData);
-  return mongooseDbOperation(() => newRoute.save()) as Promise<Route>;
+const createRouteValidationSchema: Schema = Joi.object({
+  name: Joi.string().required(),
+  grade: Joi.number().required(),
+  description: Joi.string().optional(),
+  length: Joi.number().optional(),
+  crag: Joi.string().required(),
+  area: Joi.string().required(),
+  sector: Joi.string().required(),
+  country: Joi.string().optional(),
+  type: Joi.string().required(),
+});
+
+export const createRoute = async (route: IRoute): Promise<PartialRoute> => {
+  await validate(createRouteValidationSchema, route);
+
+  const routeToSave: IRoute = {
+    name: route.name,
+    grade: route.grade,
+    description: route.description,
+    length: route.length,
+    crag: route.crag,
+    sector: route.sector,
+    type: route.type,
+    country: route.country,
+    area: route.area,
+  };
+
+  return mongooseDbOperation(() => new RouteModel(routeToSave).save(), ROUTE_DATA_TO_OMIT) as Promise<PartialRoute>;
 };
 
-export const update = async (id: string, routeData: Partial<Route>): Promise<Route | null> => {
-  return mongooseDbOperation(() => 
-    RouteModel.findByIdAndUpdate(id, routeData, { new: true })
-      .populate('area')
-      .populate('crag')
-      .populate('sector')
-      .exec()
-  ) as Promise<Route | null>;
+export const deleteRouteById = (id: string): Promise<PartialRoute> => {
+  return mongooseDbOperation(() => RouteModel.findOneAndDelete({ _id: id }), ROUTE_DATA_TO_OMIT) as Promise<PartialRoute>;
 };
 
-export const deleteItem = async (id: string): Promise<boolean> => {
-  const result = await mongooseDbOperation(() => RouteModel.findByIdAndDelete(id).exec());
-  return !!result;
-};
+const updateRouteValidationSchema: Schema = Joi.object()
+  .keys({
+    name: Joi.string().optional(),
+    grade: Joi.number().optional(),
+    description: Joi.string().optional(),
+    length: Joi.number().optional(),
+    crag: Joi.string().optional(),
+    sector: Joi.string().optional(),
+    country: Joi.string().required(),
+    area: Joi.string().required(),
+  })
+  .required()
+  .min(1);
 
-export const getRoutesBySector = async (sectorId: string): Promise<Route[]> => {
-  return mongooseDbOperation(() => 
-    RouteModel.find({ sector: sectorId })
-      .populate('area')
-      .populate('crag')
-      .populate('sector')
-      .exec()
-  ) as Promise<Route[]>;
-};
+export const updateRouteById = async (id: string, route: IRoute): Promise<PartialRoute> => {
+  await validate(updateRouteValidationSchema, route);
 
-export const getRoutesByCrag = async (cragId: string): Promise<Route[]> => {
-  return mongooseDbOperation(() => 
-    RouteModel.find({ crag: cragId })
-      .populate('area')
-      .populate('crag')
-      .populate('sector')
-      .exec()
-  ) as Promise<Route[]>;
+  const operation = async () => {
+    const dbRoute: any = await RouteModel.findOne({ _id: id });
+
+    dbRoute.name = route.name || dbRoute.name;
+    dbRoute.grade = route.grade || dbRoute.grade;
+    dbRoute.description = route.description || dbRoute.description;
+    dbRoute.length = route.length || dbRoute.length;
+    dbRoute.crag = route.crag || dbRoute.crag;
+    dbRoute.sector = route.sector || dbRoute.sector;
+    dbRoute.country = route.country || dbRoute.country;
+    dbRoute.area = route.area || dbRoute.area;
+
+    return dbRoute.save();
+  };
+
+  return mongooseDbOperation(operation, ROUTE_DATA_TO_OMIT) as Promise<PartialRoute>;
 };

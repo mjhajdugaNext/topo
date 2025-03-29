@@ -6,7 +6,7 @@ import {SectorModel} from './sector.model';
 import { ISector, PartialSector, SECTOR_DATA_TO_OMIT, Sector, SectorToSave } from './sector.interface';
 
 export const getSectors = async (filter: any = undefined, toOmit: string[] = []): Promise<PartialSector[]> => {
-  return mongooseDbOperation(() => SectorModel.find(filter), [...SECTOR_DATA_TO_OMIT, ...toOmit]) as Promise<PartialSector[]>;
+  return mongooseDbOperation(() => SectorModel.find(filter).populate('crag'), [...SECTOR_DATA_TO_OMIT, ...toOmit]) as Promise<PartialSector[]>;
 };
 
 export const getSectorById = (id: string): Promise<PartialSector> => {
@@ -19,6 +19,7 @@ export const getSectorById = (id: string): Promise<PartialSector> => {
 const createSectorValidationSchema: Schema = Joi.object({
   name: Joi.string().required(),
   description: Joi.string().optional(),
+  crag: Joi.string().required(),
   coordinates: Joi.object({
     latitude: Joi.number().required(),
     longitude: Joi.number().required()
@@ -46,6 +47,7 @@ const updateSectorValidationSchema: Schema = Joi.object()
   .keys({
     name: Joi.string().optional(),
     description: Joi.string().optional(),
+    crag: Joi.string().required(),
     coordinates: Joi.object({
       latitude: Joi.number().required(),
       longitude: Joi.number().required()

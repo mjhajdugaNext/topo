@@ -3,7 +3,7 @@ import { Route, RouteType } from './route.interface';
 
 const RouteSchema = new Schema({
   name: { type: String, required: true },
-  officialGrade: { type: String, required: true },
+  grade: { type: Number, required: true },
   type: { 
     type: String, 
     enum: Object.values(RouteType),
