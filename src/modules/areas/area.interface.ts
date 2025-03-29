@@ -5,4 +5,5 @@ export interface Area {
   name: string;
   coordinates: Coordinates;
   description: string;
+  country: string;
 }
